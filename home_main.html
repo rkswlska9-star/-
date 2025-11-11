@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SoloMeal Master 홈</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        'bg-ivory': '#fffbf0',
+                        'bg-soft-ivory': '#fcf7e7',
+                        'primary-green': '#5BA449',
+                        'light-green': '#a9d682',
+                        'soft-orange': '#ffb067',
+                        'soft-yellow': '#fff3b0',
+                        'soft-purple': '#a29bfe',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 모바일 환경에 최적화된 최대 너비 설정 및 배경 */
+        .mobile-container {
+            margin-left: auto;
+            margin-right: auto;
+            min-height: 100vh;
+            background-color: #fffbf0; /* 아이보리 배경 */
+            position: relative;
+        }
+        /* 가로 스크롤 영역에 스크롤바 숨기기 */
+        .horizontal-scroll-container::-webkit-scrollbar {
+            display: none;
+        }
+        .horizontal-scroll-container {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+            /* 드래그 시 파란색 하이라이트 방지 (사용자 요청 반영) */
+            user-select: none;
+        }
+        /* 레시피 카드 이미지 Placeholder 스타일 */
+        .recipe-image-placeholder {
+            width: 100%;
+            padding-top: 100%; /* 1:1 비율 유지 */
+            background-color: #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            color: #666;
+            border-radius: 0.5rem;
+            position: relative;
+        }
+        /* 사이드 메뉴 스타일 */
+        .sidebar {
+            width: 25%; /* 가로 크기를 25%로 줄임 */
+            min-width: 120px; /* 최소 너비 설정 (텍스트 깨짐 방지) */
+            transform: translateX(100%);
+            transition: transform 0.3s ease-in-out;
+            top: 0;
+            right: 0;
+            position: fixed;
+            height: 100%;
+            z-index: 50;
+            /* 배경색을 약간 진한 아이보리로 설정 (불투명) */
+            background-color: theme('colors.bg-soft-ivory'); /* **불투명하게 유지** */
+        }
+        .sidebar.open {
+            transform: translateX(0);
+        }
+        /* 사이드 메뉴에만 스크롤바 숨김 적용 */
+        .sidebar::-webkit-scrollbar {
+            display: none;
+        }
+        .sidebar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+            /* ... (기존 sidebar 스타일 유지) ... */
+            width: 25%;
+            min-width: 120px;
+            transform: translateX(100%);
+            transition: transform 0.3s ease-in-out;
+            top: 0;
+            right: 0;
+            position: fixed;
+            height: 100%;
+            z-index: 50;
+            background-color: theme('colors.bg-soft-ivory');
+        }
+        
+        /* ⬇️ 추가: 사이드바 오버레이 스타일 */
+        #sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4); /* 어두운 반투명 오버레이 */
+            z-index: 40; /* 사이드바 (z-index: 50)보다 낮게 설정 */
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease;
+        }
+        #sidebar-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+        /* 페이지 콘텐츠 전환 시 부드러운 효과 */
+        .page-content {
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            min-height: calc(100vh - 8rem); 
+        }
+        .page-content.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* 검색창 스타일 */
+        .search-container {
+            border: 2px solid theme('colors.primary-green'); /* 네이버처럼 굵은 녹색 테두리 */
+            border-radius: 9999px; /* 완전한 라운드 */
+            display: flex;
+            align-items: center;
+            padding: 8px 16px; /* 내부 여백 */
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .search-input::placeholder {
+            color: #a0a0a0;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 font-sans">
+
+    <div id="app" class="mobile-container shadow-xl">
+        
+        <header class="flex justify-between items-center p-4 bg-bg-ivory border-b border-gray-200 sticky top-0 z-20">
+            <h1 class="text-4xl font-extrabold text-primary-green tracking-tight">SoloMeal Master</h1>
+            
+            <button id="menu-button" class="text-gray-700 hover:text-primary-green p-2 rounded-xl transition duration-150 active:bg-gray-100">
+                <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+            </button>
+        </header>
+
+        <div id="sidebar" class="sidebar shadow-2xl overflow-y-auto">
+            <div class="p-5 flex justify-between items-center border-b border-gray-200 bg-bg-soft-ivory sticky top-0">
+                <p class="text-lg font-bold text-gray-800">메뉴</p>
+                <button id="close-menu-button" class="text-gray-600 hover:text-red-500 p-1 rounded-full transition duration-150 active:bg-gray-100">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <nav class="flex flex-col p-4 space-y-2 bg-bg-soft-ivory h-full">
+                <a href="#" class="p-4 text-base text-gray-700 font-semibold hover:bg-light-green/20 rounded-xl transition duration-150">재료 유통기한 관리</a>
+                <a href="#" class="p-4 text-base text-gray-700 font-semibold hover:bg-light-green/20 rounded-xl transition duration-150">편의점 꿀조합 검색</a>
+                <a href="#" class="p-4 text-base text-gray-700 font-semibold hover:bg-light-green/20 rounded-xl transition duration-150 border-t mt-2 pt-4">바코드 인식 (재고 추가)</a>
+                <a href="#" class="p-4 text-base text-gray-700 font-semibold hover:bg-light-green/20 rounded-xl transition duration-150">환경 설정</a>
+                <a href="#" class="p-4 text-base text-red-500 font-semibold hover:bg-red-50/20 rounded-xl transition duration-150">로그아웃</a>
+            </nav>
+        </div>
+        
+        <div id="content-container">
+            <div id="page-home" class="page-content active p-5 space-y-36 pb-24">
+
+                <section class="mt-20">
+                    <div class="search-container">
+                        <span class="text-lg font-extrabold text-primary-green pr-3 border-r border-gray-300">혼밥</span>
+                        
+                        <input 
+                            type="text" 
+                            placeholder="재료를 입력해 주세요" 
+                            class="search-input flex-grow text-gray-700 px-3 py-1 text-base focus:outline-none"
+                            aria-label="재료 검색 입력"
+                        >
+                        
+                        <button class="text-primary-green p-1 ml-2 transition duration-150 active:scale-95" aria-label="검색 실행">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </section>
+                <section class="space-y-4">
+                    <h2 class="text-2xl font-bold text-gray-800"> 오늘의 추천 레시피</h2>
+                    
+                    <div id="scroll-section" class="flex overflow-x-scroll horizontal-scroll-container space-x-5 p-1 cursor-grab active:cursor-grabbing">
+                        
+                        <div class="flex-shrink-0 w-48 bg-white rounded-2xl shadow-xl overflow-hidden transition transform hover:scale-[1.02] cursor-pointer">
+                            <div class="recipe-image-placeholder bg-soft-orange/50">사진 영역</div>
+                            <div class="p-4 text-center">
+                                <p class="text-lg font-bold text-gray-800 truncate">간단 스팸마요 덮밥</p>
+                            </div>
+                        </div>
+
+                        <div class="flex-shrink-0 w-48 bg-white rounded-2xl shadow-xl overflow-hidden transition transform hover:scale-[1.02] cursor-pointer">
+                            <div class="recipe-image-placeholder bg-light-green/50">사진 영역</div>
+                            <div class="p-4 text-center">
+                                <p class="text-lg font-bold text-gray-800 truncate">냉장고 털이 파스타</p>
+                            </div>
+                        </div>
+
+                        <div class="flex-shrink-0 w-48 bg-white rounded-2xl shadow-xl overflow-hidden transition transform hover:scale-[1.02] cursor-pointer">
+                            <div class="recipe-image-placeholder bg-primary-green/50">사진 영역</div>
+                            <div class="p-4 text-center">
+                                <p class="text-lg font-bold text-gray-800 truncate">에어프라이어 닭가슴살</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex-shrink-0 w-48 bg-white rounded-2xl shadow-xl overflow-hidden transition transform hover:scale-[1.02] cursor-pointer">
+                            <div class="recipe-image-placeholder bg-soft-purple/50">사진 영역</div>
+                            <div class="p-4 text-center">
+                                <p class="text-lg font-bold text-gray-800 truncate">뚝딱 마파두부 덮밥</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <section class="space-y-4">
+                    <h2 class="text-2xl font-bold text-gray-800"> 인기 급상승 레시피</h2>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-white rounded-2xl shadow-lg overflow-hidden transition hover:shadow-xl cursor-pointer">
+                            <div class="recipe-image-placeholder bg-soft-yellow/50">
+                                <span class="absolute top-3 left-3 px-3 py-1 bg-primary-green text-white text-sm font-bold rounded-full">#1</span>
+                                사진 영역
+                            </div>
+                            <div class="p-4">
+                                <p class="text-lg font-bold text-gray-800 truncate">콘치즈 꿀조합</p>
+                                <p class="text-sm text-gray-500 mt-0.5">편의점 3분 완성</p>
+                            </div>
+                        </div>
+    
+                        <div class="bg-white rounded-2xl shadow-lg overflow-hidden transition hover:shadow-xl cursor-pointer">
+                            <div class="recipe-image-placeholder bg-soft-orange/50">
+                                <span class="absolute top-3 left-3 px-3 py-1 bg-primary-green text-white text-sm font-bold rounded-full">#2</span>
+                                사진 영역
+                            </div>
+                            <div class="p-4">
+                                <p class="text-lg font-bold text-gray-800 truncate">유통기한 김치찌개</p>
+                                <p class="text-sm text-gray-500 mt-0.5">자취생 필수 메뉴</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-2xl shadow-lg overflow-hidden transition hover:shadow-xl cursor-pointer">
+                            <div class="recipe-image-placeholder bg-light-green/50">
+                                <span class="absolute top-3 left-3 px-3 py-1 bg-primary-green text-white text-sm font-bold rounded-full">#3</span>
+                                사진 영역
+                            </div>
+                            <div class="p-4">
+                                <p class="text-lg font-bold text-gray-800 truncate">단짠단짠 마약계란</p>
+                                <p class="text-sm text-gray-500 mt-0.5">밑반찬 종결자</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-2xl shadow-lg overflow-hidden transition hover:shadow-xl cursor-pointer">
+                            <div class="recipe-image-placeholder bg-soft-purple/50">
+                                <span class="absolute top-3 left-3 px-3 py-1 bg-primary-green text-white text-sm font-bold rounded-full">#4</span>
+                                사진 영역
+                            </div>
+                            <div class="p-4">
+                                <p class="text-lg font-bold text-gray-800 truncate">참치마요 컵라면</p>
+                                <p class="text-sm text-gray-500 mt-0.5">급상승 꿀조합</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="h-4"></div>
+            </div>
+
+            <div id="page-inventory" class="page-content hidden p-5 space-y-8 pb-24">
+                <h2 class="text-2xl font-bold text-gray-800 border-b pb-3 mb-6">냉장고 & 재고 관리</h2>
+                <div class="p-6 bg-white rounded-xl shadow-lg text-center space-y-6">
+                    <p class="text-gray-600 text-lg font-medium">재고 목록이 곧 표시됩니다.</p>
+                    <p class="text-gray-500 text-base">여기에 냉장고 재료 목록, 유통기한 임박 알림 등이 표시됩니다.</p>
+                    <button class="bg-soft-orange text-white font-bold py-3 px-6 rounded-xl shadow-md hover:bg-soft-orange/80 transition duration-150 text-lg">
+                        + 바코드 스캔으로 재료 추가
+                    </button>
+                </div>
+            </div>
+            
+            <div id="page-mypage" class="page-content hidden p-5 space-y-8 pb-24">
+                <h2 class="text-2xl font-bold text-gray-800 border-b pb-3 mb-6">마이페이지</h2>
+                <div class="p-6 bg-white rounded-xl shadow-lg text-center space-y-6">
+                    <p class="text-gray-600 text-lg font-medium">사용자 설정 및 정보 페이지입니다.</p>
+                    <div class="text-left pt-4 space-y-3">
+                        <p class="font-bold text-xl text-primary-green">SoloMeal Master님</p>
+                        <p class="text-sm text-gray-500">solo_master@email.com</p>
+                        <a href="#" class="block text-base text-gray-700 hover:text-primary-green transition duration-150 border-t pt-3">찜한 레시피 목록</a>
+                        <a href="#" class="block text-base text-gray-700 hover:text-primary-green transition duration-150">알림 설정</a>
+                        <a href="#" class="block text-base text-red-500 hover:text-red-400 transition duration-150">회원 탈퇴</a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        
+        <footer class="fixed bottom-0 left-0 right-0 max-w-[600px] mx-auto bg-white border-t-2 border-primary-green/50 shadow-2xl z-40">
+            <nav class="flex justify-around items-center h-20">
+                
+                <button class="nav-button flex flex-col items-center justify-center text-gray-500 hover:text-primary-green transition duration-150 p-2" data-target="page-inventory">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M2.5 10A1.5 1.5 0 0 1 4 8.5v-3A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v3A1.5 1.5 0 0 1 21.5 10"></path>
+                        <path d="M12 4v16"></path>
+                        <path d="M2.5 16A1.5 1.5 0 0 1 4 14.5v-3A1.5 1.5 0 0 1 5.5 10h13A1.5 1.5 0 0 1 20 11.5v3A1.5 1.5 0 0 1 21.5 16"></path>
+                    </svg>
+                    <span class="text-sm font-medium mt-1">재고</span>
+                </button>
+                
+                <button class="nav-button flex flex-col items-center justify-center text-primary-green transition duration-150 p-2" data-target="page-home" id="home-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                    </svg>
+                    <span class="text-sm font-bold mt-1">홈</span>
+                </button>
+
+                <button class="nav-button flex flex-col items-center justify-center text-gray-500 hover:text-primary-green transition duration-150 p-2" data-target="page-mypage">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    <span class="text-sm font-medium mt-1">마이페이지</span>
+                </button>
+            </nav>
+        </footer>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const sidebar = document.getElementById('sidebar');
+            const menuButton = document.getElementById('menu-button');
+            const closeMenuButton = document.getElementById('close-menu-button');
+            const navButtons = document.querySelectorAll('.nav-button');
+            const contentPages = document.querySelectorAll('.page-content');
+            
+            const openSidebar = () => {
+                sidebar.classList.add('open');
+            };
+
+            const closeSidebar = () => {
+                sidebar.classList.remove('open');
+            };
+
+            // --- 1. 사이드 메뉴 토글 및 닫기 기능 ---
+            menuButton.addEventListener('click', openSidebar);
+            closeMenuButton.addEventListener('click', closeSidebar);
+
+            // 프레임 밖 클릭 시 닫기 (오버레이 없이 구현)
+            document.addEventListener('click', (e) => {
+                // 사이드바가 열려있을 때만 작동
+                if (!sidebar.classList.contains('open')) {
+                    return; 
+                }
+                
+                const isClickInsideSidebar = sidebar.contains(e.target);
+                const isClickMenuButton = menuButton.contains(e.target);
+
+                // 클릭 위치가 사이드바 내부도 아니고 메뉴 버튼도 아니라면 닫기
+                if (!isClickInsideSidebar && !isClickMenuButton) {
+                    closeSidebar();
+                }
+            });
+
+
+            // --- 2. 하단 네비게이션 페이지 전환 기능 ---
+            const switchPage = (targetId) => {
+                contentPages.forEach(page => {
+                    page.classList.remove('active');
+                    page.classList.add('hidden');
+                });
+
+                const targetPage = document.getElementById(targetId);
+                targetPage.classList.remove('hidden');
+                targetPage.classList.add('active');
+
+                // 네비게이션 버튼 활성화 상태 업데이트
+                navButtons.forEach(button => {
+                    button.classList.remove('text-primary-green', 'font-bold');
+                    button.querySelector('span').classList.remove('font-bold');
+                    button.classList.add('text-gray-500', 'font-medium');
+                    button.querySelector('span').classList.add('font-medium');
+                    
+                    // SVG stroke-width를 2.5로 (일반)
+                    const svg = button.querySelector('svg');
+                    svg.setAttribute('stroke-width', '2.5');
+                });
+                
+                const currentActiveButton = document.querySelector(`.nav-button[data-target="${targetId}"]`);
+                if(currentActiveButton) {
+                    currentActiveButton.classList.remove('text-gray-500', 'font-medium');
+                    currentActiveButton.classList.add('text-primary-green', 'font-bold');
+                    currentActiveButton.querySelector('span').classList.remove('font-medium');
+                    currentActiveButton.querySelector('span').classList.add('font-bold');
+                    
+                    // 홈 버튼만 stroke-width를 3으로 강조
+                    const svg = currentActiveButton.querySelector('svg');
+                    if (targetId === 'page-home') {
+                        svg.setAttribute('stroke-width', '3');
+                    }
+                }
+            };
+
+            // 네비게이션 버튼 이벤트 리스너 설정
+            navButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const targetPageId = this.dataset.target;
+                    switchPage(targetPageId);
+                    // 페이지 전환 시 사이드 메뉴 닫기
+                    if (sidebar.classList.contains('open')) {
+                        closeSidebar();
+                    }
+                });
+            });
+
+            // 초기 페이지 설정 (홈)
+            switchPage('page-home'); 
+
+            // --- 3. 가로 스크롤 드래그 기능 (오늘의 추천 레시피) ---
+            const slider = document.getElementById('scroll-section');
+            let isDown = false;
+            let startX;
+            let scrollLeft;
+
+            const startDrag = (e) => {
+                isDown = true;
+                slider.classList.add('active:cursor-grabbing');
+                const clientX = e.touches ? e.touches[0].clientX : e.pageX;
+                startX = clientX - slider.offsetLeft;
+                scrollLeft = slider.scrollLeft;
+            };
+
+            const endDrag = () => {
+                isDown = false;
+                slider.classList.remove('active:cursor-grabbing');
+            };
+
+            const moveDrag = (e) => {
+                if (!isDown) return;
+                // preventDefault를 사용하여 드래그 중 텍스트 선택(영역 표시) 방지
+                if (e.cancelable) e.preventDefault(); 
+                
+                const clientX = e.touches ? e.touches[0].clientX : e.pageX;
+                const x = clientX - slider.offsetLeft;
+                const walk = (x - startX) * 1.5; // 드래그 속도 조절
+                slider.scrollLeft = scrollLeft - walk;
+            };
+
+            // 마우스 이벤트
+            slider.addEventListener('mousedown', startDrag);
+            slider.addEventListener('mouseleave', endDrag);
+            slider.addEventListener('mouseup', endDrag);
+            // 드래그 중 텍스트 선택 방지: mousemove 이벤트에서 preventDefault 대신 CSS user-select:none 사용
+            slider.addEventListener('mousemove', moveDrag);
+            
+            // 터치 이벤트
+            slider.addEventListener('touchstart', startDrag);
+            slider.addEventListener('touchend', endDrag);
+            slider.addEventListener('touchcancel', endDrag);
+            slider.addEventListener('touchmove', (e) => {
+                    if (isDown) {
+                        moveDrag(e);
+                    }
+            }, { passive: false }); // 터치 이벤트에서 preventDefault를 사용하기 위해 passive: false 설정
+        });
+    </script>
+</body>
+</html>
