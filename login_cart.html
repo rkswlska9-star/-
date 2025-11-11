@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SoloMeal Master 냉장고 관리</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        // 로그인 화면과 유사한 아이보리 톤 (메인 배경)
+                        'bg-ivory': '#fffbf0',
+                        // 메뉴 창 색상: 메인 배경보다 약간 진한 아이보리
+                        'bg-soft-ivory': '#fcf7e7',
+                        // 기존 로그인 화면 톤을 참고한 색상 팔레트
+                        'primary-green': '#8ac926',
+                        'light-green': '#a9d682',
+                        'soft-orange': '#ffb067',
+                        'soft-yellow': '#fff3b0',
+                        'soft-purple': '#a29bfe',
+
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* ⭐️ 통합된 폰트 불러오기 (기존) ⭐️ */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        
+        body {
+            /* ⭐️ 배경색 변경: 홈.txt의 배경색으로 변경 ⭐️ */
+            font-family: 'Inter', sans-serif;
+            background-color: theme('colors.bg-ivory'); /* #fffbf0 */
+            margin: 0;
+            height: 100vh;
+            overflow-x: hidden; /* 가로 스크롤 방지 */
+        }
+        
+        /* ⬇️ 핵심 수정: 냉장고 앱을 초기 숨김 처리 */
+        #refrigerator-app {
+            display: none; 
+            height: 100vh;
+            overflow-y: auto; 
+            -webkit-overflow-scrolling: touch;
+            
+            /* ⭐️ 홈.txt의 .mobile-container 스타일 적용 ⭐️ */
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            min-height: 100vh;
+            background-color: theme('colors.bg-ivory'); /* 아이보리 배경 */
+            position: relative;
+        }
+
+        #login-section {
+            /* ⭐️ 배경 이미지 경로: static 폴더 안에 honbab_master.png를 넣어야 합니다. ⭐️ */
+            background-image: url("혼밥_마스터.png"); 
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: cover; 
+            min-height: 100vh;
+            height: 100vh; 
+            background-attachment: fixed;
+            
+            /* 로그인 블록을 중앙 하단에 배치 */
+            display: flex;          
+            justify-content: center; 
+            align-items: flex-end;   
+        }
+        .login-box {
+            background:  rgba(255, 255, 255, 0.9);
+            padding: 24px;
+            border-radius: 16px;
+            /* border: 2px solid #f8e1ba; */
+            width: 90%; 
+            max-width: 280px; 
+            margin-bottom: 60px; 
+            text-align: center;
+        }
+        .login-box input {
+            width: 100%;
+            margin-bottom: 5px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+        /* ⭐️ 기존 색상 변경: primary-green 사용 ⭐️ */
+        .login-box button {
+            width: 100%;
+            padding: 10px;
+            background-color: #5BA449;
+
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        /* ⭐️ 기존 색상 변경: light-green 사용 ⭐️ */
+        .login-box button:hover {
+            background-color:  #a9d682 ;
+        }
+
+        #bottom-nav {
+            display: none; 
+        }
+
+        /* ... (나머지 기존 CSS 스타일 유지) ... */
+        .message-box {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            font-weight: 600;
+        }
+        .status-error {
+            background-color: #fee2e2;
+            color: #ef4444;
+        }
+        .status-success {
+            background-color: #d1fae5;
+            color: #10b981;
+        }
+        .status-info {
+            background-color: #dbeafe;
+            color: #3b82f6;
+        }
+        .inventory-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+        /* ⭐️ 그룹 헤더 스타일 (기존) */
+        .category-header {
+            border-bottom: 1px solid #e5e7eb;
+            user-select: none;
+            transition: background-color 0.2s;
+        }
+        .category-header:hover {
+            background-color: #f3f4f6;
+        }
+        /* ⭐️ 아이콘 회전 애니메이션 (기존) */
+        .toggle-icon {
+            transition: transform 0.3s ease;
+        }
+        .rotate-90 {
+            transform: rotate(90deg);
+        }
+        /* 재고 항목 스타일 (기존) */
+        .inventory-item {
+            padding: 1rem;
+            border-bottom: 1px solid #f3f4f6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.2s;
+            cursor: pointer; 
+        }
+        .inventory-item:last-child {
+            border-bottom: none;
+        }
+        .inventory-item:hover {
+            background-color: #f9fafb;
+        }
+        .inventory-item:active {
+            background-color: #eff6ff; 
+        }
+        .expiry-soon {
+            background-color: #fffbeb; 
+            border-left: 4px solid #f59e0b;
+        }
+        .expired {
+            background-color: #fee2e2; 
+            border-left: 4px solid #ef4444;
+            opacity: 0.7;
+        }
+        /* 텍스트 줄바꿈 방지 및 말줄임 처리 (레시피 타이틀용) */
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            line-clamp: 2; 
+            overflow: hidden;
+            text-overflow: ellipsis;
+            height: 2.5rem; 
+        }
+        /* ⭐️ 홈.txt 의 레시피 카드 이미지 Placeholder 스타일 추가 (레시피 추천 섹션에 필요) ⭐️ */
+        .recipe-image-placeholder {
+            width: 100%;
+            padding-top: 75%; /* 4:3 비율 */
+            background-color: #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            color: #666;
+            border-radius: 0.5rem;
+            position: relative;
+        }
+
+        .scrollbar-hide {
+            -ms-overflow-style: none; /* IE and Edge */
+            scrollbar-width: none; /* Firefox */
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none; /* Chrome, Safari and Opera */
+        }
+    </style>
+</head>
+<body>
+    <section id="login-section">
+        <div class="login-box">
+            <h2 class="text-xl font-bold text-green-700 mb-3" id="auth-title">혼밥 마스터 로그인</h2> 
+            <input type="text" id="login-id" placeholder="아이디">
+            <input type="password" id="login-pw" placeholder="비밀번호" style="margin-bottom: 13px">
+            <input type="text" id="register-full-name" placeholder="성명" class="hidden"> 
+            <input type="password" id="register-pw-confirm" placeholder="비밀번호 확인" class="hidden"> 
+            
+            <button id="login-btn">로그인</button>
+            <div class="mt-2 text-sm text-gray-600">
+                <a href="#" class="hover:underline" id="toggle-register-btn">회원가입</a> | 
+                <a href="#" class="hover:underline">아이디/비밀번호 찾기</a>
+            </div>
+        </div>
+    </section>
+
+    <div id="refrigerator-app" class="shadow-xl"> 
+        
+        <header class="flex justify-between items-center p-4 bg-bg-ivory border-b border-gray-200 sticky top-0 z-20">
+            <h1 class="text-3xl font-extrabold text-primary-green tracking-tight">SoloMeal Master</h1>
+            
+            <button id="menu-trigger" class="text-gray-700 hover:text-primary-green p-2 rounded-xl transition duration-150 active:bg-gray-100">
+                <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+            </button>
+            
+        </header>
+
+        <div id="menu-popup" class="absolute right-4 top-[5.5rem] w-48 bg-bg-soft-ivory rounded-xl shadow-2xl border border-gray-200 hidden z-30 overflow-hidden">
+            <nav class="flex flex-col p-2 space-y-1">
+                <button id="menu-refrigerator" class="w-full text-left px-4 py-3 text-lg text-gray-700 font-semibold hover:bg-light-green/20 rounded-lg transition duration-150">
+                    <i class="fas fa-box mr-2"></i> 제품 등록 요청
+                </button>
+                <button id="menu-settings" class="w-full text-left px-4 py-3 text-lg text-gray-700 font-semibold hover:bg-light-green/20 rounded-lg transition duration-150 border-t mt-2 pt-2">
+                    <i class="fas fa-cog mr-2"></i> 알림 보기
+                </button>
+                <button id="menu-logout" class="w-full text-left px-4 py-3 text-lg text-red-500 font-semibold hover:bg-red-50/20 rounded-lg transition duration-150">
+                    <i class="fas fa-sign-out-alt mr-2"></i> 로그아웃
+                </button>
+            </nav>
+        </div>
+        
+        <div class="p-5"> 
+            
+            <div id="register-section" class="bg-bg-soft-ivory p-6 rounded-xl shadow-lg mb-8">
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">상품 등록</h2>
+                
+                <div class="flex space-x-2 mb-4">
+                    <input type="text" id="barcode-input" placeholder="PLU/바코드 번호 입력" class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-primary-green focus:border-primary-green transition duration-150">
+                    <button id="search-button" class="bg-primary-green hover:bg-light-green text-white font-medium p-3 rounded-lg shadow-md transition duration-200">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    <button id="camera-trigger" class="bg-soft-orange hover:bg-soft-orange/80 text-white font-medium p-3 rounded-lg shadow-md transition duration-200" title="바코드 스캔">
+                        <i class="fas fa-camera"></i>
+                    </button>
+                </div>
+                <input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden">
+
+
+                <div id="product-info-box" class="mt-4 p-4 border border-light-green/50 rounded-lg bg-light-green/10 hidden">
+                    <p><strong class="text-primary-green">상품명:</strong> <span id="display-product-name"></span></p>
+                    <p><strong class="text-primary-green">대분류:</strong> <span id="display-major-category"></span></p>
+                </div>
+
+                <div class="mt-4">
+                    <label for="expiry-date-input" class="block text-gray-700 font-medium mb-2">유통기한</label>
+                    <input type="date" id="expiry-date-input" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary-green focus:border-primary-green transition duration-150">
+                </div>
+
+                <button id="register-button" class="w-full mt-4 bg-soft-purple hover:bg-soft-purple/80 text-white font-bold p-3 rounded-lg shadow-lg transition duration-200 disabled:opacity-50" disabled>
+                    냉장고에 등록하기
+                </button>
+            </div>
+
+            <div id="status-message" class="message-box status-info text-sm hidden"></div>
+
+
+            <div class="mt-6 w-full">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold text-gray-700">나의 냉장고 재고 (<span id="inventory-count">0</span>)</h2>
+                    <button id="load-inventory-button" class="bg-soft-orange hover:bg-soft-orange/80 text-white font-medium px-4 py-2 rounded-lg shadow-md transition duration-200">
+                        나의 냉장고 조회
+                    </button>
+                </div>
+                
+                <div id="inventory-list-container" class="inventory-list">
+                    <p id="no-inventory-message" class="p-4 text-gray-500 text-center">조회 버튼을 눌러 재고 목록을 가져오세요.</p>
+                    </div>
+            </div>
+
+            <div class="mt-8 w-full">
+                <h2 class="text-xl font-semibold text-gray-700 mb-4 flex justify-between items-center">
+                    레시피 추천 <span class="text-sm font-normal text-primary-green">(재고 항목을 클릭하세요!)</span>
+                </h2>
+                
+                <div id="recipe-recommendations" class="grid grid-cols-2 gap-4">
+                    <p id="no-recipe-message" class="col-span-2 p-4 text-gray-500 text-center">재고 목록에서 항목을 클릭하면 관련 레시피가 여기에 표시됩니다.</p>
+                    </div>
+            </div>
+        </div>
+        
+    </div>
+
+    <footer id="bottom-nav" class="fixed bottom-0 left-0 right-0 max-w-[600px] mx-auto 
+                                    bg-white/95 backdrop-blur-sm shadow-2xl z-40 
+                                    border-t border-gray-200 p-2 flex justify-around items-center">
+            
+            <button id="nav-refrigerator" class="flex flex-col items-center text-primary-green transition duration-150 p-2 rounded-lg active:bg-gray-100">
+                <!-- <i class="fas fa-box text-xl"></i> -->
+                <img src="/static/cart.png" alt="재고 아이콘" class="w-7 h-7">
+                <span class="text-xs mt-1 font-semibold">나의 냉장고</span>
+            </button>
+            
+            <button id="nav-recipes" class="flex flex-col items-center text-gray-500 hover:text-primary-green transition duration-150 p-2 rounded-lg active:bg-gray-100">
+                <!-- <i class="fas fa-utensils text-xl"></i> -->
+                <img src="/static/home.png" alt="홈 아이콘" class="w-7 h-7">
+                <span class="text-xs mt-1 font-semibold">홈</span>
+            </button>
+
+            <button id="nav-settings" class="flex flex-col items-center text-gray-500 hover:text-primary-green transition duration-150 p-2 rounded-lg active:bg-gray-100">
+                <!-- <i class="fas fa-cog text-xl"></i> -->
+                <img src="/static/my.png" alt="마이페이지" class="w-7 h-7">
+                <span class="text-xs mt-1 font-semibold">마이페이지</span>
+            </button>
+            
+        </footer>
+
+    <script>
+        const BASE_URL = window.location.origin;
+
+        // ⭐️ 추가: 로그인 관련 요소 ⭐️
+        const authTitle = document.getElementById('auth-title');
+        const loginIdInput = document.getElementById('login-id');
+        const loginPwInput = document.getElementById('login-pw');
+        // ⭐️ 신규: 성명 필드 ⭐️
+        const registerFullNameInput = document.getElementById('register-full-name'); 
+        const registerPwConfirmInput = document.getElementById('register-pw-confirm');
+        const toggleRegisterBtn = document.getElementById('toggle-register-btn');
+        
+        const loginBtn = document.getElementById('login-btn');
+        const loginSection = document.getElementById('login-section');
+        const appContainer = document.getElementById('refrigerator-app'); 
+        
+        // ⭐️ 신규: 메뉴 팝업 관련 요소 (ID 유지) ⭐️
+        const menuTrigger = document.getElementById('menu-trigger'); // 메뉴 버튼 요소
+        const menuPopup = document.getElementById('menu-popup');
+        const menuLogoutButton = document.getElementById('menu-logout');
+        const menuRefrigeratorButton = document.getElementById('menu-refrigerator');
+        // ⭐️ 신규: 환경 설정 버튼 ⭐️
+        const menuSettingsButton = document.getElementById('menu-settings');
+
+
+        // ⭐️ 재고 관리 관련 요소 ⭐️
+        const barcodeInput = document.getElementById('barcode-input');
+        const searchButton = document.getElementById('search-button');
+        const cameraTrigger = document.getElementById('camera-trigger');
+        const cameraInput = document.getElementById('camera-input');
+        const productInfoBox = document.getElementById('product-info-box');
+        const displayProductName = document.getElementById('display-product-name');
+        const displayMajorCategory = document.getElementById('display-major-category');
+        const expiryDateInput = document.getElementById('expiry-date-input');
+        const registerButton = document.getElementById('register-button');
+        const statusMessage = document.getElementById('status-message');
+        const loadInventoryButton = document.getElementById('load-inventory-button');
+        const inventoryCount = document.getElementById('inventory-count');
+        const inventoryListContainer = document.getElementById('inventory-list-container');
+        const recipeRecommendations = document.getElementById('recipe-recommendations');
+        const navRefrigeratorButton = document.getElementById('nav-refrigerator');
+        const navRecipesButton = document.getElementById('nav-recipes');
+        const navSettingsButton = document.getElementById('nav-settings');
+
+        let isRegisterMode = false; // 현재 모드 상태 (기본: 로그인)
+        let currentProductData = {}; // 현재 조회된 상품 정보 저장
+
+        // =============================================================
+        // ⭐️ 유틸리티 함수 ⭐️
+        // =============================================================
+
+        /** 상태 메시지 표시 */
+        function showStatus(message, type = 'info') {
+            statusMessage.textContent = message;
+            statusMessage.className = `message-box status-${type}`;
+            statusMessage.classList.remove('hidden');
+        }
+        
+        /** 레시피 카드 생성 및 렌더링 */
+        function renderRecipes(recipes) {
+            recipeRecommendations.innerHTML = '';
+            if (recipes.length === 0) {
+                recipeRecommendations.innerHTML = '<p class="col-span-2 p-4 text-gray-500 text-center">검색 결과가 없습니다. DB에 레시피를 등록해주세요.</p>';
+                return;
+            }
+            recipes.forEach(recipe => {
+                // ⭐️⭐️⭐️ 수정된 부분: recipe.image를 사용합니다. ⭐️⭐️⭐️
+                const imageUrl = recipe.image || 'https://via.placeholder.com/400x300?text=No+Image'; // 이미지가 없을 경우 기본 이미지 URL
+                
+                const recipeHtml = `
+                    <a href="${recipe.link}" target="_blank" class="block bg-white border border-gray-200 rounded-xl shadow-lg hover:shadow-xl transition duration-300 overflow-hidden">
+                        <div class="w-full relative overflow-hidden" style="padding-top: 75%;">
+                            <img src="${imageUrl}" alt="${recipe.title}" class="absolute top-0 left-0 w-full h-full object-cover">
+                        </div>
+                        <div class="p-3">
+                            <p class="text-sm font-semibold text-gray-800 line-clamp-2">${recipe.title}</p>
+                        </div>
+                    </a>
+                `;
+                recipeRecommendations.innerHTML += recipeHtml;
+            });
+        }
+
+        /** 등록 버튼 활성화/비활성화 */
+        function checkRegistrationEligibility() {
+            const hasProduct = currentProductData.pluCode && currentProductData.productName;
+            const hasExpiryDate = expiryDateInput.value.trim() !== '';
+            registerButton.disabled = !(hasProduct && hasExpiryDate);
+        }
+
+        /** 남은 유통기한 일수 계산 */
+        function calculateDaysRemaining(expiryDateStr) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const expiryDate = new Date(expiryDateStr);
+            expiryDate.setHours(0, 0, 0, 0);
+            const diffTime = expiryDate.getTime() - today.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays;
+        }
+
+        /** 날짜를 YYYY-MM-DD 형식으로 포맷팅 */
+        function formatDate(date) {
+            if (!date) return '날짜 정보 없음';
+            if (date instanceof Date) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+            return date.toString();
+        }
+
+        // =============================================================
+        // ⭐️ 인증 기능 함수 (로그인/회원가입 모드) ⭐️
+        // =============================================================
+
+        /** 로그인 <-> 회원가입 모드 전환 */
+        function toggleAuthMode(toRegister) {
+            isRegisterMode = toRegister;
+            if (isRegisterMode) {
+                authTitle.textContent = '혼밥 마스터 회원가입';
+                loginBtn.textContent = '회원가입';
+                toggleRegisterBtn.textContent = '로그인으로 돌아가기';
+                registerFullNameInput.classList.remove('hidden');
+                registerPwConfirmInput.classList.remove('hidden');
+            } else {
+                authTitle.textContent = '혼밥 마스터 로그인';
+                loginBtn.textContent = '로그인';
+                toggleRegisterBtn.textContent = '회원가입';
+                registerFullNameInput.classList.add('hidden');
+                registerPwConfirmInput.classList.add('hidden');
+            }
+            // 입력 필드 초기화
+            loginIdInput.value = '';
+            loginPwInput.value = '';
+            registerFullNameInput.value = '';
+            registerPwConfirmInput.value = '';
+        }
+
+        /** 로그인 처리 함수 */
+        async function handleLogin() {
+            const id = loginIdInput.value.trim();
+            const password = loginPwInput.value.trim();
+
+            if (!id || !password) {
+                alert('아이디와 비밀번호를 입력해주세요.');
+                return;
+            }
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = '로그인 중...';
+
+            try {
+                // ⭐️ 실제 API 호출 코드가 있어야 합니다. 여기서는 더미로 처리합니다. ⭐️
+                const response = await fetch(`${BASE_URL}/api/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, password })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    const fullName = result.full_name || '사용자'; 
+                    alert(`로그인 성공! ${fullName}님 환영합니다.`);
+                    loginSection.style.display = 'none';
+                    if (appContainer) { 
+                        appContainer.style.display = 'block';
+                        // ⭐️⭐️ 수정/추가된 부분 ⭐️⭐️
+                        document.getElementById('bottom-nav').style.display = 'flex'; // 내비게이션 바 표시
+                        document.body.style.overflow = 'auto'; 
+                        loadInventory(); 
+                    }
+                } else {
+                    alert(`로그인 실패: ${result.error}`);
+                }
+            } catch (error) {
+                console.error("로그인 API 호출 오류:", error);
+                alert("서버와 통신 중 문제가 발생했습니다.");
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = '로그인';
+            }
+        }
+
+        /** ngrok 주소 자동 탐색 */
+        async function getBaseUrl() {
+            try {
+                const res = await fetch("http://127.0.0.1:4040/api/tunnels");
+                const data = await res.json();
+                // 첫 번째 tunnel의 public_url 사용
+                const url = data.tunnels[0].public_url;
+                console.log("현재 ngrok 주소:", url);
+                return url;
+            } catch (e) {
+                console.error("ngrok 주소를 가져올 수 없습니다:", e);
+                alert("ngrok이 실행 중인지 확인해주세요!");
+                return null;
+            }
+        }
+
+        /** 회원가입 처리 함수 (성명 필드 추가됨) */
+        async function handleRegistration() {
+            const id = loginIdInput.value.trim();
+            const password = loginPwInput.value.trim();
+            const passwordConfirm = registerPwConfirmInput.value.trim();
+            const full_name = registerFullNameInput.value.trim(); // ⭐️ 성명 값 획득 ⭐️
+
+            if (!id || !password || !passwordConfirm || !full_name) {
+                alert('아이디, 비밀번호, 성명을 모두 입력해주세요.');
+                return;
+            }
+            if (password !== passwordConfirm) {
+                alert('비밀번호와 비밀번호 확인이 일치하지 않습니다.');
+                return;
+            }
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = '등록 중...';
+
+            try {
+                // ✅ 자동으로 ngrok 주소 불러오기
+                const BASE_URL = await getBaseUrl();
+                if (!BASE_URL) return;
+
+                const response = await fetch(`${BASE_URL}/api/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, password, full_name })
+                });
+
+                const result = await response.json();
+
+                if (response.status === 201) {
+                    alert(`회원가입 성공: ${result.message}\n이제 로그인해주세요.`);
+                    toggleAuthMode(false); // 로그인 모드로 전환
+                } else {
+                    alert(`회원가입 실패: ${result.error}`);
+                }
+            } catch (error) {
+                console.error("회원가입 API 호출 오류:", error);
+                alert("서버와 통신 중 문제가 발생했습니다.");
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = '회원가입';
+            }
+        }
+
+
+        // =============================================================
+        // ⭐️ 바코드 인식 및 상품 조회 (API 주소 및 방식 수정) ⭐️
+        // =============================================================
+
+        /** 바코드 이미지 인식 API 호출 */
+        async function recognizeBarcode(file) {
+            showStatus('바코드를 인식하는 중...');
+            cameraTrigger.disabled = true;
+
+            const formData = new FormData();
+            formData.append('image', file);
+
+            try {
+                // ⭐️ URL 일치: /api/recognize-barcode (app.py와 일치) ⭐️
+                const response = await fetch(`${BASE_URL}/api/recognize-barcode`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+
+                if (response.ok) {
+                    showStatus(`바코드 인식 성공: ${result.pluCode}`, 'success');
+                    barcodeInput.value = result.pluCode;
+                    searchProduct(result.pluCode);
+                } else {
+                    showStatus(`바코드 인식 실패: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                console.error("바코드 API 호출 오류:", error);
+                showStatus("서버와 통신 중 문제가 발생했습니다. Flask 서버를 확인하세요.", 'error');
+            } finally {
+                cameraTrigger.disabled = false;
+            }
+        }
+
+        /** 상품 정보 조회 API 호출 (URL 및 방식 수정) */
+        async function searchProduct(pluCode) {
+            if (!pluCode) {
+                showStatus("PLU/바코드 번호를 입력해주세요.", 'error');
+                return;
+            }
+
+            showStatus("상품 정보 조회 중...");
+
+            try {
+                // ⭐️ 수정됨: URL을 /api/search-plu로, method를 POST로 변경 ⭐️
+                const response = await fetch(`${BASE_URL}/api/search-plu`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ plu: pluCode }) // app.py의 search_plu 함수는 'plu' 키를 찾습니다.
+                });
+                
+                const result = await response.json();
+
+                if (response.ok) {
+                    currentProductData = {
+                        pluCode: pluCode,
+                        productName: result.productName,
+                        majorCategory: result.majorCategory
+                        // minorCategory는 백엔드에서 반환되지만 여기서는 필수가 아니므로 무시
+                    };
+                    displayProductName.textContent = result.productName;
+                    displayMajorCategory.textContent = result.majorCategory;
+                    productInfoBox.classList.remove('hidden');
+                    showStatus(`상품명: ${result.productName} (대분류: ${result.majorCategory})`, 'success');
+                    checkRegistrationEligibility(); // 상품 정보 획득 후 등록 가능 여부 확인
+                } else {
+                    productInfoBox.classList.add('hidden');
+                    currentProductData = {};
+                    registerButton.disabled = true;
+                    showStatus(`상품 조회 실패: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                console.error("상품 조회 API 호출 오류:", error);
+                showStatus("서버와 통신 중 문제가 발생했습니다. Flask 서버를 확인하세요.", 'error');
+            }
+        }
+
+        // =============================================================
+        // ⭐️ 재고 등록 및 조회 (URL 수정) ⭐️
+        // =============================================================
+
+        /** 재고 정보 등록 */
+        async function registerInventory() {
+            if (registerButton.disabled) return;
+            
+            const expiryDate = expiryDateInput.value.trim();
+            if (!expiryDate) {
+                showStatus("유통기한을 입력해주세요.", 'error');
+                return;
+            }
+
+            registerButton.disabled = true;
+            registerButton.textContent = '등록 중...';
+            
+            const registrationData = {
+                ...currentProductData,
+                expiryDate: expiryDate
+            };
+
+            try {
+                // ⭐️ URL 일치: /api/register-inventory (app.py와 일치) ⭐️
+                const response = await fetch(`${BASE_URL}/api/register-inventory`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(registrationData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showStatus(result.message, 'success');
+                    // 성공 후 입력 필드 초기화
+                    barcodeInput.value = '';
+                    expiryDateInput.value = '';
+                    productInfoBox.classList.add('hidden');
+                    currentProductData = {};
+                    registerButton.disabled = true;
+                    loadInventory();
+                } else {
+                    showStatus(`등록 실패: ${result.error || '알 수 없는 오류.'}`, 'error');
+                }
+            } catch (error) {
+                console.error("등록 API 호출 오류:", error);
+                showStatus("서버와 통신 중 문제가 발생했습니다. Flask 서버를 확인하세요.", 'error');
+            } finally {
+                registerButton.disabled = false;
+                registerButton.textContent = '냉장고에 등록하기';
+            }
+        }
+
+        /** 재고 목록 조회 (URL 수정) */
+        async function loadInventory() {
+            showStatus("냉장고 재고 정보를 조회 중입니다...", 'info');
+            loadInventoryButton.disabled = true;
+
+            try {
+                // ⭐️ 수정됨: URL을 /api/get-inventory로 변경 (app.py와 일치) ⭐️
+                const response = await fetch(`${BASE_URL}/api/get-inventory`);
+                const result = await response.json();
+
+                if (response.ok) {
+                    showStatus("재고 목록 조회 성공!", 'success');
+                    renderInventory(result.inventory);
+                } else {
+                    showStatus(`재고 목록 조회 실패: ${result.error}`, 'error');
+                    renderInventory([]);
+                }
+            } catch (error) {
+                console.error("재고 조회 API 호출 오류:", error);
+                showStatus("서버와 통신 중 문제가 발생했습니다. Flask 서버를 확인하세요.", 'error');
+                renderInventory([]);
+            } finally {
+                loadInventoryButton.disabled = false;
+            }
+        }
+
+        /** 재고 목록 렌더링 */
+        function renderInventory(inventory) {
+            inventoryListContainer.innerHTML = '';
+            inventoryCount.textContent = inventory.length;
+
+            if (inventory.length === 0) {
+                inventoryListContainer.innerHTML = '<p id="no-inventory-message" class="p-4 text-gray-500 text-center">현재 냉장고에 등록된 재고가 없습니다.</p>';
+                return;
+            }
+
+            // 1. 재고를 대분류(majorCategory) 기준으로 그룹화
+            const groupedInventory = inventory.reduce((acc, item) => {
+                const category = item.majorCategory || '미분류';
+                if (!acc[category]) {
+                    acc[category] = [];
+                }
+                acc[category].push(item);
+                return acc;
+            }, {});
+
+            let allHtml = '';
+
+            // 2. 그룹별로 HTML 생성
+            for (const category in groupedInventory) {
+                allHtml += `
+                    <div class="category-group">
+                        <div class="category-header flex justify-between items-center p-4 cursor-pointer bg-gray-100/50">
+                            <h3 class="text-lg font-bold text-gray-700">${category} (${groupedInventory[category].length})</h3>
+                            <i class="fas fa-chevron-right toggle-icon rotate-90 text-gray-500"></i>
+                        </div>
+                        <div class="category-items hidden">
+                `;
+
+                groupedInventory[category].forEach(item => {
+                    const daysRemaining = calculateDaysRemaining(item.expiryDate);
+                    let expiryText = '';
+                    let itemClass = 'inventory-item';
+
+                    if (daysRemaining < 0) {
+                        expiryText = `만료됨 (${Math.abs(daysRemaining)}일 전)`;
+                        itemClass += ' expired';
+                    } else if (daysRemaining <= 7) {
+                        expiryText = `D-${daysRemaining}`;
+                        itemClass += ' expiry-soon';
+                    } else {
+                        expiryText = `D-${daysRemaining}`;
+                    }
+                    
+                    const itemHtml = `
+                        <div class="${itemClass}" data-plu="${item.pluCode}" data-name="${item.productName}">
+                            <div>
+                                <p class="text-base font-semibold text-gray-800">${item.productName}</p>
+                                <p class="text-sm text-gray-500 mt-0.5">유통기한: ${formatDate(item.expiryDate)}</p>
+                            </div>
+                            <div class="flex flex-col items-end">
+                                <span class="text-sm font-bold ${daysRemaining < 0 ? 'text-red-600' : daysRemaining <= 7 ? 'text-yellow-600' : 'text-green-600'}">
+                                    ${expiryText}
+                                </span>
+                                <button data-id="${item.inventoryId}" class="delete-button text-red-500 hover:text-red-700 text-sm mt-1">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    allHtml += itemHtml;
+                });
+                allHtml += `</div>`; // .category-items 닫기
+            }
+            inventoryListContainer.innerHTML = allHtml;
+
+            // 3. 재고 항목 클릭 이벤트 리스너 (레시피 조회 기능)
+            document.querySelectorAll('.inventory-item').forEach(itemElement => {
+                itemElement.addEventListener('click', (e) => {
+                    const pluCode = itemElement.getAttribute('data-plu');
+                    const productName = itemElement.getAttribute('data-name');
+                    searchRecipes(pluCode, productName);
+                });
+            });
+
+            // 4. 삭제 버튼 이벤트 리스너 (이벤트 버블링 방지 포함)
+            document.querySelectorAll('.delete-button').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.stopPropagation(); // 상위 요소(inventory-item)의 클릭 이벤트 전파 방지
+                    const id = e.currentTarget.getAttribute('data-id');
+                    if (confirm(`정말 ID ${id} 재고를 삭제하시겠습니까?`)) {
+                        deleteInventoryItem(id);
+                    }
+                });
+            });
+
+            // 5. ⭐️ 카테고리 헤더 토글 이벤트 리스너 ⭐️
+            document.querySelectorAll('.category-header').forEach(header => {
+                header.addEventListener('click', () => {
+                    const targetElement = header.nextElementSibling;
+                    const icon = header.querySelector('.toggle-icon');
+                    if (targetElement.classList.contains('hidden')) {
+                        targetElement.classList.remove('hidden');
+                        icon.classList.add('rotate-90');
+                    } else {
+                        targetElement.classList.add('hidden');
+                        icon.classList.remove('rotate-90');
+                    }
+                });
+            });
+        }
+
+        /** 재고 항목 삭제 */
+        async function deleteInventoryItem(inventoryId) {
+            showStatus(`재고 항목 ID ${inventoryId} 삭제 중...`, 'info');
+            try {
+                // ⭐️ URL 일치: /api/delete-inventory/<int:inventory_id> (app.py와 일치) ⭐️
+                const response = await fetch(`${BASE_URL}/api/delete-inventory/${inventoryId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+
+                if (response.ok) {
+                    showStatus(result.message, 'success');
+                    loadInventory(); // 삭제 후 목록 새로고침
+                } else {
+                    showStatus(`삭제 실패: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                console.error("삭제 API 호출 오류:", error);
+                showStatus("서버와 통신 중 문제가 발생했습니다. Flask 서버를 확인하세요.", 'error');
+            }
+        }
+        
+        // =============================================================
+        // ⭐️ 레시피 검색 기능 (방식 수정) ⭐️
+        // =============================================================
+
+        /** 레시피 검색 (PLU 코드 기반) (방식 수정) */
+        async function searchRecipes(pluCode, productName) {
+            if (!pluCode) return;
+            
+            showStatus(`"${productName}"를 포함하는 레시피를 검색 중입니다...`, 'info');
+            
+            try {
+                // ⭐️ 수정됨: method를 POST로 변경하고 JSON body에 pluCode를 담아 전송 ⭐️
+                const response = await fetch(`${BASE_URL}/api/search-recipes`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pluCode: pluCode }) // app.py의 search_recipes 함수는 'pluCode' 키를 찾습니다.
+                });
+                
+                const result = await response.json();
+
+                if (response.ok) {
+                    showStatus(`"${productName}" 관련 레시피 ${result.recipes.length}건 조회 성공.`, 'success');
+                    renderRecipes(result.recipes);
+                } else {
+                    showStatus(`레시피 검색 결과 없음: ${result.error}`, 'error');
+                    renderRecipes([]);
+                }
+            } catch (error) {
+                console.error("레시피 검색 API 호출 오류:", error);
+                showStatus("서버와 통신 중 문제가 발생했습니다. Flask 서버를 확인하세요.", 'error');
+                recipeRecommendations.innerHTML = '<p class="col-span-2 p-4 text-center text-red-500">서버 연결 오류. 콘솔 확인 요망.</p>';
+            }
+        }
+
+
+        // =============================================================
+        // ⭐️ 기타 이벤트 리스너 (기존 코드 유지 및 메뉴 기능 보존) ⭐️
+        // =============================================================
+        
+        // 1. "상품 정보 조회" 버튼 클릭 이벤트
+        searchButton.addEventListener('click', () => {
+            const pluCode = barcodeInput.value.trim();
+            searchProduct(pluCode);
+        });
+
+        // 2. 바코드 입력 필드에서 Enter 키 입력 이벤트
+        barcodeInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                searchButton.click();
+            }
+        });
+
+        // 3. 유통기한 입력 필드 변경 시 등록 가능 여부 확인
+        expiryDateInput.addEventListener('change', checkRegistrationEligibility);
+
+        // 4. "냉장고에 등록하기" 버튼 클릭 이벤트
+        registerButton.addEventListener('click', registerInventory);
+
+        // 5. "나의 냉장고 조회" 버튼 클릭 이벤트
+        loadInventoryButton.addEventListener('click', loadInventory);
+
+        // 6. 카메라 트리거 버튼 클릭 (Hidden File Input 클릭)
+        cameraTrigger.addEventListener('click', () => {
+            cameraInput.click();
+        });
+
+        // 7. 카메라 입력(이미지 파일 선택) 변경 이벤트
+        cameraInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                recognizeBarcode(file);
+            }
+        });
+
+        // 8. ⭐️ 메뉴 아이콘 클릭 이벤트 리스너 (팝업 토글) ⭐️ (기존 기능 보존)
+        menuTrigger.addEventListener('click', (e) => {
+            e.stopPropagation(); // 문서 클릭 이벤트로 닫히는 것을 방지
+            menuPopup.classList.toggle('hidden');
+        });
+
+        // 9. ⭐️ 메뉴 외부 클릭 시 팝업 닫기 ⭐️ (기존 기능 보존)
+        document.addEventListener('click', (e) => {
+            // 팝업이 열려있고, 클릭된 요소가 팝업 내부도, 버튼도 아닐 때 팝업 닫기
+            if (!menuPopup.classList.contains('hidden') && !menuPopup.contains(e.target) && e.target !== menuTrigger) {
+                menuPopup.classList.add('hidden');
+            }
+        });
+        
+        // 10. ⭐️ '로그아웃' 버튼 클릭 이벤트 (팝업 내부) ⭐️ (기존 기능 보존)
+        menuLogoutButton.addEventListener('click', () => {
+            menuPopup.classList.add('hidden'); // 메뉴 닫기
+            if (confirm("로그아웃 하시겠습니까?")) { 
+                isRegisterMode = false;
+                toggleAuthMode(false);
+                
+                if (appContainer) {
+                    appContainer.style.display = 'none'; 
+                }
+                loginSection.style.display = 'flex'; 
+                document.body.style.overflow = 'hidden'; 
+                
+                alert("로그아웃되었습니다.");
+            }
+        });
+
+        // 11. ⭐️ '재료 유통기한 관리' 버튼 클릭 이벤트 (팝업 내부) ⭐️ (기존 기능 보존)
+        menuRefrigeratorButton.addEventListener('click', () => {
+             menuPopup.classList.add('hidden'); // 메뉴 닫기
+             // 현재 페이지이므로 팝업만 닫음
+        });
+
+        // 12. ⭐️ '환경 설정' 버튼 클릭 이벤트 (신규 추가) ⭐️
+        if (menuSettingsButton) {
+            menuSettingsButton.addEventListener('click', () => {
+                menuPopup.classList.add('hidden'); // 메뉴 닫기
+                showStatus("환경 설정 페이지로 이동할 준비 중입니다...", 'info');
+            });
+        }
+
+        // 로그인 <-> 회원가입 토글 버튼 이벤트
+        toggleRegisterBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            toggleAuthMode(!isRegisterMode);
+        });
+
+        // 최종 인증 버튼 클릭 이벤트 (로그인/회원가입 분기)
+        loginBtn.addEventListener('click', () => {
+            if (isRegisterMode) {
+                handleRegistration();
+            } else {
+                handleLogin();
+            }
+        });
+
+        // 14. ⭐️⭐️ 신규: 하단 내비게이션 바 이벤트 리스너 ⭐️⭐️
+        if (navRefrigeratorButton) {
+            // 14-1. 재고 관리 버튼 -> '나의 냉장고' 홈 페이지로 이동하도록 수정
+            navRefrigeratorButton.addEventListener('click', () => {
+                // 🚨 수정: 실제 '나의 냉장고' 홈 경로를 입력합니다.
+                window.location.href = '/refrigerator.html'; // 예시 경로
+                // 또는 메인 페이지라면: window.location.href = '/'; 
+            });
+        }
+
+        if (navRecipesButton) {
+            // 14-2. 레시피 추천 버튼 (다른 페이지로 이동하도록 수정)
+            navRecipesButton.addEventListener('click', () => {
+                // ⭐️⭐️ 수정: 'recipes.html' 페이지로 완전히 이동하도록 변경 ⭐️⭐️
+                window.location.href = '/weather_recipes'; 
+            });
+        }
+
+        // 14-3. 환경 설정 버튼 (기능 실행)
+        if (navSettingsButton) {
+            navSettingsButton.addEventListener('click', () => {
+                showStatus("환경 설정 페이지로 이동할 준비 중입니다...", 'info');
+        });
+        }
+    </script>
+</body>
+</html>
